@@ -1,0 +1,63 @@
+# Kubernetes NGINX Ingress TLS Demo
+
+## Objectif
+Déploiement d’un pod NGINX exposé via un Service et un Ingress TLS pour HTTPS.  
+
+                          ┌──────────────────────┐
+                          │   Client (curl / browser) │
+                          │   https://secured-svc.com │
+                          └───────────────┬──────────┘
+                                          │ 443 (TLS)
+                                Ingress Controller (NGINX)
+                                          │
+                    ┌─────────────────────┴─────────────────────┐
+                    │                                           │
+             [Ingress Rule]                           TLS termination
+             Host: secured-svc.com                     Secret: tls-secret
+             Path: /  → Service secure-deployment:80
+                    │
+                    ▼
+         ┌───────────────────────────┐
+         │       Service (ClusterIP) │
+         │   secure-deployment:80    │
+         └───────────────┬───────────┘
+                         │
+                         ▼
+              ┌─────────────────────┐
+              │   Pod (NGINX)       │
+              │ index.html (ConfigMap) │
+              └─────────────────────┘
+
+#Le site affiche un `index.html` personnalisé via ConfigMap.
+
+## Contenu du projet
+- `deployment.yaml` : Deployment NGINX
+- `service.yaml` : Service ClusterIP
+- `ingress.yaml` : Ingress avec TLS
+- `configmap.yaml` : Index.html personnalisé
+- `README.md` : Documentation
+
+## Prérequis
+- Kubernetes cluster (minikube, k3s, kind…)
+- Ingress Controller NGINX installé
+- `kubectl` configuré
+
+## Déploiement
+```bash
+kubectl apply -f configmap.yaml
+kubectl apply -f deployment.yaml
+kubectl apply -f service.yaml
+kubectl apply -f ingress.yaml
+
+
+#Ajout du host local
+echo "127.0.0.1 secured-svc.com" | sudo tee -a /etc/hosts
+
+#test en https:
+curl -vk -H "Host: secured-svc.com" --http1.1 https://127.0.0.1:{"Nodeport"}/
+
+#Notes
+
+Le TLS est géré par l’Ingress Controller, pas par le pod NGINX.
+
+La page index est servie via ConfigMap pour montrer la personnalisation qui delivre le message : "Deploiement du site securisé via https !"
